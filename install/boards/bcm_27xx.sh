@@ -7,6 +7,15 @@ GITHUB_REPOSITORY=${GITHUB_REPOSITORY:-bluerobotics/blueos-docker}
 REMOTE="${REMOTE:-https://raw.githubusercontent.com/${GITHUB_REPOSITORY}}"
 ROOT="$REMOTE/$VERSION"
 
+# Check what distribution is used
+if [ -f /etc/lsb-release -o -d /etc/lsb-release.d ];
+then
+    export OS_=$(lsb_release -is);
+else
+    OS_="Unknown"
+fi
+OS=${OS:-$OS_}  # Allows overriding the distribution used
+
 # Download, compile, and install spi0 mosi-only device tree overlay for
 # neopixel LED on navigator board
 echo "- compile spi0 device tree overlay."
@@ -15,9 +24,9 @@ DTS_NAME="spi0-led"
 curl -fsSL -o /tmp/$DTS_NAME $DTS_PATH/$DTS_NAME.dts
 if [ "$OS" == "Ubuntu" ];
 then
-dtc -@ -Hepapr -I dts -O dtb -o /boot/firmware/overlays/$DTS_NAME.dtbo /tmp/$DTS_NAME
+    dtc -@ -Hepapr -I dts -O dtb -o /boot/firmware/overlays/$DTS_NAME.dtbo /tmp/$DTS_NAME
 else
-dtc -@ -Hepapr -I dts -O dtb -o /boot/overlays/$DTS_NAME.dtbo /tmp/$DTS_NAME
+    dtc -@ -Hepapr -I dts -O dtb -o /boot/overlays/$DTS_NAME.dtbo /tmp/$DTS_NAME
 fi
 
 # Remove any configuration related to i2c and spi/spi1 and do the necessary changes for navigator
