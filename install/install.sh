@@ -69,6 +69,15 @@ ARCHITECTURE="$(uname -m)"
     exit 1
 )
 
+# Check what distribution is used
+if [ -f /etc/lsb-release -o -d /etc/lsb-release.d ];
+then
+    export OS_=$(lsb_release -is);
+else
+    OS_="Unknown"
+fi
+OS=${OS:-$OS_}  # Allows overriding the distribution used
+
 # Check if the script is running as root
 [[ $EUID != 0 ]] && echo "Script must run as root."  && exit 1
 
@@ -88,6 +97,7 @@ else
 fi
 
 echo "Checking for blocked wifi and bluetooth."
+apt --assume-yes install rfkill
 rfkill unblock all
 
 # Get the number of free blocks and the block size in bytes, and calculate the value in GB
@@ -156,11 +166,14 @@ echo "Going to install blueos-docker version ${VERSION}."
 echo "Downloading and installing udev rules."
 curl -fsSL $ROOT/install/udev/100.autopilot.rules -o /etc/udev/rules.d/100.autopilot.rules
 
-echo "Disabling automatic Link-local configuration in dhcpd.conf."
-# delete line if it already exists
-sed -i '/noipv4ll/d' /etc/dhcpcd.conf
-# add noipv4ll
-sed -i '$ a noipv4ll' /etc/dhcpcd.conf
+if [ "$OS" != "Ubuntu" ];
+then
+    echo "Disabling automatic Link-local configuration in dhcpd.conf."
+    # delete line if it already exists
+    sed -i '/noipv4ll/d' /etc/dhcpcd.conf
+    # add noipv4ll
+    sed -i '$ a noipv4ll' /etc/dhcpcd.conf
+fi
 
 # Do necessary changes if running in a Raspiberry
 command -v raspi-config && (
@@ -193,6 +206,7 @@ docker create \
     $BLUEOS_BOOTSTRAP
 
 # add docker entry to rc.local
+touch /etc/rc.local
 sed -i "\%^exit 0%idocker start blueos-bootstrap" /etc/rc.local || echo "sed failed to add expand_fs entry in /etc/rc.local"
 
 # Configure network settings
@@ -205,4 +219,4 @@ echo "You can access after the reboot:"
 echo "- The computer webpage: http://blueos.local"
 echo "- The ssh client: pi@blueos.local"
 echo "System will reboot in 10 seconds."
-sleep 10 && reboot
+# sleep 10 && reboot

@@ -9,6 +9,9 @@ CONFIGURE_NETWORK_PATH="$REMOTE/install/network"
 # Exit if something goes wrong
 set -e
 
+echo "Install Avahi daemon if not installed"
+apt --assume-yes install avahi-daemon
+
 systemctl is-active --quiet avahi-daemon || (
     echo "Avahi daemon is not installed or running."
     exit 1
